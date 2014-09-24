@@ -1,0 +1,32 @@
+{
+  "name": "sails-generate-role",
+  "version": "0.10.0",
+  "description": "sails generate role",
+  "main": "Generator.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "sails-generate-role",
+    "generator",
+    "sails",
+    "generate",
+    "plugin"
+  ],
+  "author": "Tobias Viehweger",
+  "license": "MIT",
+  "dependencies": {
+  	"lodash": ">=2.4.x",
+  	"merge-defaults": ">=0.1.0"
+  },
+  "devDependencies": {
+    "sails-generate": "*",
+    "reportback": "*",
+    "fs-extra": "*"
+  },
+  "sailsGenerator": {
+    "type": "sails-generate-role",
+    "behavior": "overrides `sails generate sails-generate-role`",
+    "sailsVersion": "~0.10.0"
+  }
+}
