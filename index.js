@@ -1,6 +1,7 @@
 var _ = require('lodash');
     
-function rolePolicy (param) {
+function rolePolicy(param) {
+
     //First, check which invocation we are dealing with..
     // {} => model restrictions
     // [] => multi role controller policy check
@@ -9,7 +10,7 @@ function rolePolicy (param) {
         var roles = (_.isString(param)) ? [param] : param;
         return getControllerPolicyHandler(roles);
     }
-    else if(_.isPlainObject(param)) {
+    else if (_.isPlainObject(param)) {
         return getModelRestrictionHandler(param);
     }
     
