@@ -1,6 +1,7 @@
 var buildDictionary = require('../../../node_modules/sails/node_modules/sails-build-dictionary');
 var Deferred = require('../../../node_modules/sails/node_modules/waterline/lib/waterline/query/deferred');
 var _ = require('../../../node_modules/sails/node_modules/lodash/lodash');
+var roleUtil = require('../../../node_modules/sails-generate-role');
 
 module.exports = function (sails) {
     return {
@@ -103,24 +104,44 @@ module.exports = function (sails) {
                 Deferred.prototype.execWithRoleFilter = function (request, cb) {
                     //Do stuff first and modify select etc
                     var model = this._context.__proto__.identity;
+                    var self = this;
 
-                    //Wrap logic from index.js
-                    if (sails.config.roles.models[model]) {
-                        if (request.roles) {
+                    //Calculate restrictions & check
+                    roleUtil.calculateModelRestrictions(request, model, function (skip, restrictRoles, modelRestrictions) {
 
-                            //... deep down
+                        if (skip)
+                            return self.exec(cb);
 
-                            if (this._values) {
-                                //Probably an create or update, find stuff accordingly
+                        var restrictValues = [];
+                        _.forEach(modelRestrictions, function (values, key) {
 
-                            }
-                            else {
-                                //Only adjust where clause..
-                            }
+                            //Check for special cases 
+                            if (_.contains(values, 'readonly') && _.contains(values, 'restrict'))
+                                _.remove(values, function (attr) { return attr === 'readonly' });
 
-                            this.exec(cb);
-                        }
-                    }
+                            _.forEach(values, function (property) {
+                                switch (property) {
+                                    case 'readonly':
+                                        processReadOnly(self, key);
+                                        break;
+                                    case 'hidden':
+                                        //Not supported yet, we'll need the .omit stuff in criteria
+                                        break;
+                                    case 'restrict':
+                                        restrictValues.push(key);
+                                        break;
+                                }
+                            });
+                        });
+
+                        //Process restrictions
+                        processRestrict(self, model, restrictRoles, restrictValues, function (err, lala, lala2) {
+                            if (err)
+                                return cb('Request role filter threw error: ' + err);
+
+                            self.exec(cb);
+                        });
+                    });
 
                 };
             });
@@ -133,3 +154,140 @@ module.exports = function (sails) {
         }
     };
 };
+
+function processReadOnly(deferred, key) {
+    //Create or update, possibilities include:
+    // A) Blacklisting / New / Changed criteria 
+    // B) Blacklisting / New / Changed values
+    // C) Error
+    if (deferred._values) {
+        if (_.contains(deferred._values, key))
+            delete deferred._values[key];
+    }
+    else {
+        //Delete & Fetch do not have restrictions for read-only values
+    }
+}
+
+function processRestrict(deferred, request, model, restrictRoles, restrictValues, cb) {
+    var valueChangePossible = !_.isNull(deferred);
+    var values = valueChangePossible ? deferred._values : request.params.all();
+    var criteria = valueChangePossible ? deferred._criteria : request.params.all().where;
+
+    // If `where` parameter is a string, try to interpret it as JSON
+    if (_.isString(criteria)) {
+        criteria = JSON.parse(criteria);
+    }
+
+    var isCreateUpdate = valueChangePossible ? !!values : (request.method === 'PUT' || request.method === 'POST');
+
+    if (restrictValues.length > 0) {
+        //Cluster by role
+        var valuesByRole = {};
+        _.forEach(restrictRoles, function (value, key) {
+
+            if (!valuesByRoles[key])
+                valueByRoles[key] = [];
+
+            _.forEach(restrictValues, function (attr, index) {
+                if (_.contains(restrictRoles[key], attr))
+                    valuesByRoles[key].push(attr);
+            });
+
+        });
+
+        var brk = false;
+        var count = 0;
+        var chooseEmpty = function (value) { return _.isNull(value) || _.isUndefined(value) };
+        var keys = _.keys(valuesByRole);
+        var endIt = false;
+
+        for (var i = 0; i < keys.length && !endIt; i++) {
+            var key = keys[i];
+            var roleValues = valuesByRole[key];
+
+            var restrictCriteria = function () {
+                sails.roles[key].restrictCriteria(request, model, roleValues, criteria, function (err, newCriteria) {
+
+                    //If this errors, fail all
+                    if (err) {
+                        endIt = true;
+                        return cb(err);
+                    }
+
+                    var added = _.pick(newCriteria, function (value, key) { return !_.has(criteria, key) });
+                    var changed = _.pick(newCriteria, function (value, key) { return _.has(criteria, key) && criteria[key] != value });
+                    var removed = _.keys(_.pick(criteria, function (value, key) { return !_.has(newCriteria, key) }));
+
+                    if(valueChangePossible) {
+                        //Mix up values
+                        //1. Added => just add to list
+                        _.assign(deferred._criteria, added);
+
+                        //2. Changed => add to blacklist & overwrite
+                        _.assign(deferred._criteria, changed);
+
+                        //3. Remove removed ;)
+                        deferred._criteria = _.omit(deferred._criteria, removed);
+                    }
+                    else {
+                        request.options.where = request.options.where || {};
+                        request.options.criteria.blacklist = request.options.criteria.blacklist || [];
+                        //Mix up values
+                        //1. Added => just add to list
+                        _.assign(request.options.where, added);
+
+                        //2. Changed => add to blacklist & overwrite
+                        request.options.criteria.blacklist = _.union(request.options.criteria.blacklist, _.keys(changed));
+                        _assign(request.options.where, changed);
+
+                        //3. Put removed to blacklist as well
+                        request.options.criteria.blacklist = _.union(request.options.criteria.blacklist, removed);
+                    }
+                
+                    if (i === (keys.length - 1)) {
+                        cb();
+                    }
+                });
+            };
+
+            //If put/post -> additionally process value restrictions
+            if (isCreateUpdate) {
+                var valueObj = _.omit(_.pick(values, roleValues), chooseEmpty);
+                sails.roles[key].restrictValues(request, model, valueObj, function (err, newValues) {
+
+                    //If this errors, fail all
+                    if (err) {
+                        endIt = true;
+                        return cb(err);
+                    }
+
+                    //Now, compare to old values and process changes
+                    //1. null/missing values will be blacklisted
+                    var cleared = _.keys(_.pick(newValues, chooseEmpty));
+                    var added = _.keys(_.pick(newValues, function (value, key) { return !_.has(valueObj, key) }));
+                    var changed = _.keys(_.pick(newValues, function (value, key) { return _.has(valueObj, key) && !_.contains(cleared, key) && valueObj[key] != value }));
+                    var removed = _.keys(_.pick(valueObj, function (value, key) { return !_.has(newValues, key) }));
+                    var blacklist = _.union(cleared, removed);
+
+                    if (valueChangePossible) {
+                        deferred._values = _.omit(deferred._values, blacklist);
+                        _.assign(deferred._values, _.merge(_.pick(newValues, added), _.pick(newValues, changed)));
+                    }
+                    else {
+                        request.options.values = request.options.values || {};
+                        request.options.values.blacklist = request.options.values.blacklist || [];
+                        _.assign(request.options.values, _.merge(_.pick(newValues, added), _.pick(newValues, changed)));
+                        req.options.values.blacklist = _.union(req.options.values.blacklist, blacklist);
+                    }
+
+                    //Finally, restrict criteria
+                    restrictCriteria();
+                });
+            }
+            else {
+                restrictCriteria();
+            }
+        }
+    }
+}
