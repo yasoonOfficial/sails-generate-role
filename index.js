@@ -11,8 +11,10 @@ function rolePolicy(param) {
         var roles = (_.isString(param)) ? [param] : param;
         return getControllerPolicyHandler(roles);
     }
+    //Not really used atm, as calls are build in hook, but for future architecture changes
+    // Leave this option
     else if (_.isPlainObject(param)) {
-        return getModelRestrictionHandler(param);
+        return param;//getModelRestrictionHandler(param);
     }
     
     throw "Not supported parameter value";
@@ -29,7 +31,7 @@ function getControllerPolicyHandler(roles) {
             var role = sails.roles[roleId];
             var lastErr;
             //The existence of checkRole is already validated on load
-            role.checkRole(request, function(err) {
+            role.hasRole(request, function(err) {
                 //If this request is based on a model and a restriction exist, cache the assigned
                 // roles for later processing => attach to request
                 // Otherwise, as the roles are OR'd, we can now stop evaluating the other roles
@@ -62,29 +64,6 @@ function getControllerPolicyHandler(roles) {
         };
         
         processRole(0);
-    };
-}
-
-function getModelRestrictionHandler(restrictions) {
-    return function(request, response, next) {
-        //First, check if this request is interesting for us (model request)
-        if(request.options.model /* && request.options.rest */) { //rest => overwritten blueprint, include them for now
-            //Determine if the model has restrictions defined!
-            core.calculateModelRestrictions(request, null, function (skip, inferRoles, modelAttributeRestrictions) {
-
-                if(skip)
-                    return next();
-
-                //Finally, process stuff => strip params from request etc.
-                core.applyModelRestrictions(request, response, inferRoles, modelAttributeRestrictions, function(err) {
-                    next(err);
-                });
-            });
-        }
-        else {
-            //Nothing to do, controller route, just continue
-            next();
-        }
     };
 }
 
