@@ -43,8 +43,8 @@ describe('Roles', function () {
                 },
                 controllers: {
                     AppController: {
-                        someMethod: ['isAuthed', function () { }],
-                        find: function () { }
+                        someMethod: true,
+                        find: true
                     }
                 },
                 hasRole: function (request, cbk) {
@@ -62,7 +62,7 @@ describe('Roles', function () {
             };
                         
             //Do logic
-            hookLogic.attachRoles({ 'admin': AdminRole });
+            hookLogic.attachRoles({ 'admin': AdminRole }, { resolveRoles: function () { } });
 
             //Build up deferred
             var Deferred = function () { };
@@ -74,6 +74,7 @@ describe('Roles', function () {
                 id: 'lala',
                 companyId: '123'
             };
+            deferred._criteria = {};
             
             //Patch in execWithRole
             hookLogic.patchDeferred(Deferred);

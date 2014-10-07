@@ -44,8 +44,8 @@ describe('Roles', function () {
                 },
                 controllers: {
                     AppController: {
-                        someMethod: ['isAuthed', function () { }],
-                        find: function () { }
+                        someMethod: true,
+                        find: true
                     }
                 },
                 hasRole: function (request, cbk) {
@@ -54,7 +54,7 @@ describe('Roles', function () {
             };
                         
             //Do logic
-            hookLogic.attachRoles({ 'admin': AdminRole });
+            hookLogic.attachRoles({ 'admin': AdminRole }, { resolveRoles: function () { } });
 
             //Check model was removed from policies
             assert(!sails.config.policies.App);
@@ -70,9 +70,9 @@ describe('Roles', function () {
             assert(sails.roles.admin.models.app.name);
         });
 
-        it('should throw an error if a role is missing the hasRole function', function () {
+        it('should throw an error if the context is missing the resolveRoles function', function () {
             //Check for invalid role behaviour
-            assert.throws(function () { hookLogic.attachRoles({ 'dummy': {} }) }, /hasRole/);
+            assert.throws(function () { hookLogic.attachRoles({ 'dummy': {} }, {}) }, /resolveRoles/);
         });
 
         it('should throw an error if a role in policies.js is not defined in /roles/', function () {
@@ -94,7 +94,7 @@ describe('Roles', function () {
                 }
             };
             
-            assert.throws(function () { hookLogic.attachRoles({}) }, /exist/);
+            assert.throws(function () { hookLogic.attachRoles({}, { resolveRoles: function () { } }) }, /exist/);
         });
     });
 });
