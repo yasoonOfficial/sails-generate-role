@@ -1,0 +1,8 @@
+/**
+ * Role
+ *
+ */
+
+module.exports = {
+  
+};

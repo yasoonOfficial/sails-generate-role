@@ -58,7 +58,7 @@ module.exports = {
     });
 
     // Decide the output filename for use in targets below:
-    scope.filename = scope.args[0];
+    scope.fileName = scope.args[0];
 
     // Add other stuff to the scope for use in our templates:
     scope.whatIsThis = 'an example file created at '+scope.createdAt;
@@ -87,8 +87,8 @@ module.exports = {
     // The `template` helper reads the specified template, making the
     // entire scope available to it (uses underscore/JST/ejs syntax).
     // Then the file is copied into the specified destination (on the left).
-    './api/hooks/role/index.js': { copy: 'hook.js' },
-	'./api/roles/:fileName': { template: 'role.js' }
+    './api/hooks/role/index.js': { copy: 'hookShell.js' },
+    './api/roles/:fileName.js': { template: 'role.js' }
   },
 
 
