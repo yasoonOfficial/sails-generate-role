@@ -1,13 +1,20 @@
 {
   "name": "sails-generate-role",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "sails generate role",
   "main": "Generator.js",
   "scripts": {
     "test": "mocha"
+  },    
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/yasoonOfficial/sails-generate-role.git"
   },
   "keywords": [
     "sails-generate-role",
+	"roles",
+	"role",
+	"policies",
     "generator",
     "sails",
     "generate",
@@ -29,5 +36,9 @@
     "type": "sails-generate-role",
     "behavior": "overrides `sails generate sails-generate-role`",
     "sailsVersion": "~0.10.0"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/yasoonOfficial/sails-generate-role/issues"
+  },
+  "homepage": "https://github.com/yasoonOfficial/sails-generate-role",
 }

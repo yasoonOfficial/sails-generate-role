@@ -10,7 +10,9 @@ module.exports = function (sails) {
             //After user config is loaded, do our processing (before policies are applied to routes)
             sails.after('hook:userconfig:loaded', function () {
 
-                hook.loadRoles();
+                //First check: Is RoleContext available
+                var roleCtx = require('../../roles/RoleContext');                
+                hook.loadRoles(roleCtx);
                 hook.patchDeferred(Deferred);
                 
             });

@@ -1,57 +1,108 @@
-# sails-generate-sails-generate-role
+# sails-generate-role
 
-A `sails-generate-role` generator for use with the Sails command-line interface.
+A role generator for use with the Sails command-line interface.
 
-Certain generators are installed by default in Sails, but they can be overridden.  Other generators create entirely new things.  Check the [Sails docs](http://sailsjs.org/#!documentation) for information on installing generator overrides / custom generators and information on building your own generators.
+Roles allow you to specify access restrictions based on roles. This includes normal controller access via policies as well as model restrictions.
 
-
+See usage section for more details.
 
 ### Installation
 
 ```sh
-$ npm install sails-generate-sails-generate-role
+$ npm install sails-generate-role
 ```
 
 
 ### Usage
 
-##### On the command line
+#### On the command line
+
+The plugin (via a Sails hook) is initialized when the first role is generated. For example, to start with an admin role, do the following:
 
 ```sh
-$ sails generate sails-generate-role 
+$ sails generate role Admin
 ```
 
+#### Concepts
 
+Please note that this is work in progress. Some of the options described below may not work yet.
+Todo: Detail 'readonly' and 'restrict' behaviour.
 
-### Development
+#### In your code
 
-To get started quickly and see this generator in action, ...
+The role restrictions can be defined in two different ways. The first is to use the policies.js, located in the sails project (config/policies.js).
+It's recommended to use this if you already have a lot of policies and don't want to migrate to the role based layout.
 
-Also see `CONTRIBUTING.md` for more information on overriding/enhancing existing generators.
+In addition, it is necessary to implement the method 'resolveRoles' of the api/roles/RoleContext.js.
+This will allow the role framework to look up all roles for a given request.
 
+##### Via policies.js
 
+config/policies.js
+```js
+var rolePolicy = require('sails-generate-role');
 
-### Questions?
+module.exports = {
+    //Restrict partnerId attribute on model app to read-only for users with role partner
+    // This would remove the partnerId from all update/create calls to blueprint REST services
+    // If you want more control (e.g. overwrite a value), use 'restrict'
+    App: rolePolicy({
+        'partner': {
+            'partnerId': 'readonly'
+        }
+    }),
 
-See `FAQ.md`.
+    //Controller policies can be combined with standard policies:
+    // Only allow logged in users with admin OR partner role to access the find action
+    AppController: {
+        find: ['isLoggedIn', rolePolicy(['admin', 'partner'])]
+    }
+};
+```
 
+##### Via *Role.js
 
+The other possibility is to specify all policies and model restrictions in the role itself (e.g. api/roles/AdminRole.js).
 
-### More Resources
+config/policies.js
+```js
+var rolePolicy = require('sails-generate-role');
+module.exports = {    
+    '*': ['isLoggedIn', rolePolicy('admin')] //Disallow for everyone except admin
+}
+```
 
-- [Stackoverflow](http://stackoverflow.com/questions/tagged/sails.js)
-- [#sailsjs on Freenode](http://webchat.freenode.net/) (IRC channel)
-- [Twitter](https://twitter.com/sailsjs)
-- [Professional/enterprise](https://github.com/balderdashy/sails-docs/blob/master/FAQ.md#are-there-professional-support-options)
-- [Tutorials](https://github.com/balderdashy/sails-docs/blob/master/FAQ.md#where-do-i-get-help)
-- <a href="http://sailsjs.org" target="_blank" title="Node.js framework for building realtime APIs."><img src="https://github-camo.global.ssl.fastly.net/9e49073459ed4e0e2687b80eaf515d87b0da4a6b/687474703a2f2f62616c64657264617368792e6769746875622e696f2f7361696c732f696d616765732f6c6f676f2e706e67" width=60 alt="Sails.js logo (small)"/></a>
+api/roles/PartnerRole.js
+```js
+module.exports = {    
+    
+    //Allow access to specific actions
+    controllers: {
+        AppController: {
+            find: true,
+            findOne: true
+        }
+    },
 
+    models: {
+        App: {
+            'partnerId': 'restrict'
+        }
+    },
+
+    restrictCriteria: function(request, model, roleValues, criteria, next) {
+        //No additional restrictions, modify criteria as necessary
+        next(null, criteria);
+    },
+
+    restrictValues: function(request, model, valueObj, next) {
+        //No additional restrictions, modify values as necessary
+        next(null, valueObj);
+    }
+}
+```
 
 ### License
 
 **[MIT](./LICENSE)**
-&copy; 2014 [balderdashy](http://github.com/balderdashy) & contributors
-
-As for [Sails](http://sailsjs.org)?  It's free and open-source under the [MIT License](http://sails.mit-license.org/).
-
-![image_squidhome@2x.png](http://i.imgur.com/RIvu9.png)
+&copy; 2014 [yasoon](http://github.com/yasoonOfficial) & contributors
