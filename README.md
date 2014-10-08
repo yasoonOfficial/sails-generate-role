@@ -40,7 +40,7 @@ This will allow the role framework to look up all roles for a given request.
 
 config/policies.js
 ```js
-var rolePolicy = require('sails-generate-role');
+var rolePolicy = require('sails-generate-role').rolePolicy;
 
 module.exports = {
     //Restrict partnerId attribute on model app to read-only for users with role partner
@@ -66,7 +66,7 @@ The other possibility is to specify all policies and model restrictions in the r
 
 config/policies.js
 ```js
-var rolePolicy = require('sails-generate-role');
+var rolePolicy = require('sails-generate-role').rolePolicy;
 module.exports = {    
     '*': ['isLoggedIn', rolePolicy('admin')] //Disallow for everyone except admin
 }

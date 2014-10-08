@@ -1,5 +1,5 @@
 var _ = require('lodash');
-var core = require('lib/functions');
+var core = require('./lib/functions');
     
 function rolePolicy(param) {
 

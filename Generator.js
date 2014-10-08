@@ -4,6 +4,7 @@
 
 var util = require('util');
 var _ = require('lodash');
+var roleFunc = require('./index');
 _.defaults = require('merge-defaults');
 
 
@@ -19,6 +20,8 @@ _.defaults = require('merge-defaults');
 
 var generator = {
 
+  rolePolicy: roleFunc,
+
   /**
    * `before()` is run before executing any of the `targets`
    * defined below.
@@ -29,7 +32,7 @@ var generator = {
    * @param  {Object} scope
    * @param  {Function} cb    [callback]
    */
-
+    
   before: function (scope, cb) {
 
     // scope.args are the raw command line arguments.
@@ -58,10 +61,14 @@ var generator = {
     });
 
     //Check if ContextRole exists yet
-    var roleCtxPath = require('path').resolve(scope.rootPath, './api/roles/RoleContext.js')
-    if (!require('fs').existsSync())
+    var roleCtxPath = require('path').resolve(scope.rootPath, './api/roles/RoleContext.js');
+    if (!require('fs').existsSync(roleCtxPath))
         generator.targets['./api/roles/RoleContext.js'] = { copy: 'RoleContext.js' }
 
+	var hookPath = require('path').resolve(scope.rootPath, './api/hooks/role/index.js');
+	if (!require('fs').existsSync(hookPath)) 
+		generator.targets['./api/hooks/role/index.js'] = { copy: 'hookShell.js' };
+		
     // Decide the output filename for use in targets below:
     scope.fileName = scope.args[0] + 'Role';
 
@@ -91,8 +98,7 @@ var generator = {
     //
     // The `template` helper reads the specified template, making the
     // entire scope available to it (uses underscore/JST/ejs syntax).
-    // Then the file is copied into the specified destination (on the left).
-    './api/hooks/role/index.js': { copy: 'hookShell.js' },
+    // Then the file is copied into the specified destination (on the left).    
     './api/roles/:fileName.js': { template: 'role.js' }
   },
 
