@@ -62,7 +62,7 @@ var generator = {
     });
 
     //Check if ContextRole and hooks/role/index.js exists yet
-    var roleCtxPath = require('path').resolve(scope.rootPath, './api/roles/RoleContext.js')
+    var roleCtxPath = require('path').resolve(scope.rootPath, './api/roles/RoleContext.js');
     if (!require('fs').existsSync(roleCtxPath)) {
         generator.targets['./api/roles/RoleContext.js'] = { copy: 'RoleContext.js' };
     }
